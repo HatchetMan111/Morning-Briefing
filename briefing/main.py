@@ -183,6 +183,25 @@ def run() -> dict:
             }
         )
 
+    # ==================== TOP STORIES & CHARTS ====================
+    # Die 5 wichtigsten Items über alle Sektionen (nach KI-Score)
+    all_scored = []
+    for sec in data_sections:
+        for it in sec.get("items", []):
+            if it.get("score", 0) >= 30:  # Mindestrelevanz
+                all_scored.append({**it, "section": sec["title"]})
+    all_scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    top_stories = all_scored[:5]
+
+    # Chart-Daten: vom markets-Modul direkt mitgeliefert
+    market_chart = []
+    for sec in sections:
+        if sec.get("chart_data"):
+            market_chart = sec["chart_data"]
+            break
+
+    # ==================== ZUSAMMENFASSUNG ====================
+    total_items = sum(len(s.get("items", [])) for s in data_sections)
     full_html = render.briefing_html(section_bodies)
     notify.send(full_html)
     render.archive(full_html)
@@ -192,6 +211,13 @@ def run() -> dict:
         "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "sources": sources_status,
         "sections": data_sections,
+        "top_stories": top_stories,
+        "market_chart": market_chart,
+        "stats": {
+            "total_items": total_items,
+            "section_count": len(data_sections),
+            "alert_count": len(alert_hits),
+        },
     }
     json_path = _store_json(data)
     stats = ", ".join(f"{t}: ok" for t, _ in section_bodies) or "keine Sektionen"

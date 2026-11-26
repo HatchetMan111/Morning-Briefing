@@ -179,6 +179,13 @@ def rss_feed(request: Request):
     return Response(content=xml, media_type="application/rss+xml")
 
 
+# ---------------- Markt-Historie (Sparkline) ----------------
+@app.get("/api/market-history/{label}")
+def api_market_history(label: str, days: int = 14):
+    history = db.get_market_history(label, days)
+    return {"label": label, "history": history}
+
+
 # ---------------- Konfiguration (config.yaml) ----------------
 @app.get("/api/config")
 def api_config():

@@ -49,7 +49,44 @@ def connect() -> sqlite3.Connection:
         "(watch_id INTEGER, price REAL, title TEXT, url TEXT, date TEXT, "
         " PRIMARY KEY (watch_id, url, date))"
     )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS market_history "
+        "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        " label TEXT NOT NULL, "
+        " value REAL NOT NULL, "
+        " change_pct REAL, "
+        " date TEXT NOT NULL, "
+        " UNIQUE(label, date))"
+    )
     return conn
+
+
+def store_market_history(label: str, value: float, change_pct: float):
+    """Tageswert eines Index speichern (für Sparkline-Charts)."""
+    today = datetime.date.today().isoformat()
+    conn = connect()
+    conn.execute(
+        "INSERT OR REPLACE INTO market_history (label, value, change_pct, date) "
+        "VALUES (?, ?, ?, ?)",
+        (label, value, change_pct, today),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_market_history(label: str, days: int = 14) -> list[dict]:
+    """Letzte N Tage eines Index zurückgeben (für Sparkline)."""
+    conn = connect()
+    rows = conn.execute(
+        "SELECT date, value, change_pct FROM market_history "
+        "WHERE label = ? ORDER BY date ASC LIMIT ?",
+        (label, days),
+    ).fetchall()
+    conn.close()
+    return [
+        {"date": r[0], "value": r[1], "change_pct": r[2]}
+        for r in rows
+    ]
 
 
 def filter_new(items: list[dict], section: str) -> list[dict]:

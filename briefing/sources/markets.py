@@ -40,6 +40,14 @@ def _index_line(label: str, ticker: str) -> str:
         return ""
     last, prev = hist["Close"].iloc[-1], hist["Close"].iloc[-2]
     pct = (last / prev - 1) * 100
+
+    # Für Chart & Historie speichern
+    try:
+        from briefing import db as _db
+        _db.store_market_history(label, round(float(last), 2), round(pct, 2))
+    except Exception:  # noqa: BLE001 - Historie darf nie den Lauf bremsen
+        pass
+
     arrow = "▲" if pct >= 0 else "▼"
     return f"{label}: {last:,.2f} ({arrow} {pct:+.2f} %)"
 
@@ -71,11 +79,24 @@ def _constituent_lines(label: str, mapping: dict) -> list[str]:
 
 def fetch(cfg: dict) -> dict:
     lines = []
+    chart_data = []  # strukturierte Daten für Frontend-Balkendiagramm
     for ix in cfg["markets"]["indices"]:
         try:
             line = _index_line(ix["label"], ix["ticker"])
             if line:
                 lines.append(line)
+                # Strukturierte Daten für Chart mitschicken
+                import re as _re
+                m = _re.search(r"([\d.,]+)\s*\((.)\s*([+-][\d.,]+)", line)
+                if m:
+                    chart_data.append({
+                        "label": ix["label"],
+                        "value": m.group(1),
+                        "arrow": m.group(2),
+                        "pct": float(
+                            m.group(3).replace("\xa0", "").replace(",", ".")
+                        ),
+                    })
         except Exception as exc:  # noqa: BLE001
             print(f"[markets] {ix['label']}: {exc}")
     for label, mapping in (
@@ -88,4 +109,5 @@ def fetch(cfg: dict) -> dict:
         "lines": lines,
         "items": [],
         "comment": True,
+        "chart_data": chart_data,
     }

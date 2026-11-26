@@ -63,6 +63,18 @@ econ_calendar:
 local_news:
   window_days: 2             # nur News der letzten X Tage
   max_per_town: 8            # sanftes Limit pro Orts-Query
+  # Polizeiberichte & Unfälle rausfiltern (Google News `-` Operator)
+  exclude_keywords:
+    - Polizeibericht
+    - Polizeimeldung
+    - Unfall
+    - Diebstahl
+    - Einbruch
+    - Festnahme
+    - Brand
+    - Körperverletzung
+    - Verkehrsunfall
+    - Blaulicht
 
 auctions:
   window_days: 14            # Versteigerungen haben längeren Vorlauf

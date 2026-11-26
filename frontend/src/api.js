@@ -35,6 +35,8 @@ export const api = {
     }).then(handle),
   deletePriceWatch: (id) =>
     fetch(`/api/price-watch/${id}`, { method: "DELETE" }).then(handle),
+  marketHistory: (label, days = 14) =>
+    fetch(`/api/market-history/${encodeURIComponent(label)}?days=${days}`).then(handle),
   config: () => fetch("/api/config").then(handle),
   saveConfig: (yaml) =>
     fetch("/api/config", {

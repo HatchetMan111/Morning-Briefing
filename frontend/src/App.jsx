@@ -9,32 +9,177 @@ const TABS = [
   { id: "settings", label: "⚙️ Einstellungen" },
 ];
 
+const SOURCE_META = {
+  "zoll-auktion": { icon: "🏛️", label: "Zoll" },
+  "google-news": { icon: "📰", label: "News" },
+  "hackernews": { icon: "💬", label: "HN" },
+  "arxiv": { icon: "📄", label: "Paper" },
+  "github-trending": { icon: "🐙", label: "GitHub" },
+  "show-hn": { icon: "🚀", label: "Show HN" },
+  "awesome-selfhosted": { icon: "⭐", label: "Awesome" },
+  "r/selfhosted": { icon: "💙", label: "Reddit" },
+  "ebay": { icon: "🛒", label: "eBay" },
+  "price-watch": { icon: "💰", label: "Preis" },
+  "zvg-news": { icon: "🏠", label: "ZVG" },
+  "gruendung": { icon: "🏢", label: "Gründung" },
+  "firma-news": { icon: "📈", label: "Firma" },
+};
+
+function SourceBadge({ source }) {
+  const meta = SOURCE_META[source] || { icon: "📌", label: source };
+  return <span className="src-badge">{meta.icon} {meta.label}</span>;
+}
+
 function ScoreBadge({ score }) {
-  const cls = score >= 70 ? "good" : score >= 50 ? "ok" : "low";
+  const cls = score >= 85 ? "top" : score >= 70 ? "good" : score >= 50 ? "ok" : "low";
   return <span className={`badge ${cls}`}>{score}</span>;
 }
 
-function SectionCard({ section }) {
+// ============ CHARTS ============
+
+function Sparkline({ points, width = 180, height = 44 }) {
+  if (!points || points.length < 2) return null;
+  const values = points.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = width / (points.length - 1);
+  const path = points
+    .map((p, i) => `${(i * step).toFixed(1)},${(height - 4 - ((p.value - min) / range) * (height - 8)).toFixed(1)}`)
+    .join(" ");
+  const isUp = values[values.length - 1] >= values[0];
+  const stroke = isUp ? "#2fbf71" : "#e05b5b";
+  const lastX = (points.length - 1) * step;
+  const lastY = height - 4 - ((values[values.length - 1] - min) / range) * (height - 8);
+  return (
+    <svg width={width} height={height} className="sparkline">
+      <polyline points={path} fill="none" stroke={stroke} strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx={lastX} cy={lastY} r="3" fill={stroke} />
+    </svg>
+  );
+}
+
+function MarketChart({ marketData }) {
+  if (!marketData || marketData.length === 0) return null;
+  const maxAbs = Math.max(...marketData.map((d) => Math.abs(d.pct)), 1);
+  return (
+    <div className="market-chart">
+      {marketData.map((m, i) => {
+        const pctWidth = (Math.abs(m.pct) / maxAbs) * 50;
+        const isUp = m.pct >= 0;
+        return (
+          <div className="market-row" key={i}>
+            <div className="market-info">
+              <span className="market-label">{m.label}</span>
+              <span className="market-value">{m.value}</span>
+            </div>
+            <div className="market-track">
+              <div className="market-zero" />
+              <div
+                className={`market-bar ${isUp ? "up" : "down"}`}
+                style={{
+                  width: `${pctWidth}%`,
+                  left: isUp ? "50%" : `${50 - pctWidth}%`,
+                }}
+              />
+            </div>
+            <span className={`market-pct ${isUp ? "pos" : "neg"}`}>
+              {isUp ? "▲" : "▼"} {Math.abs(m.pct).toFixed(2)}%
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============ VIEWS ============
+
+function StatsHeader({ stats, date, generated }) {
+  if (!stats) return null;
+  return (
+    <div className="stats-bar">
+      <div className="stat">
+        <span className="stat-num">{stats.total_items}</span>
+        <span className="stat-label">Items</span>
+      </div>
+      <div className="stat">
+        <span className="stat-num">{stats.section_count}</span>
+        <span className="stat-label">Sektionen</span>
+      </div>
+      {stats.alert_count > 0 && (
+        <div className="stat hot">
+          <span className="stat-num">{stats.alert_count}</span>
+          <span className="stat-label">🔔 Alerts</span>
+        </div>
+      )}
+      <div className="stat date">
+        <span className="stat-label">{date} · {generated?.slice(11, 16)}</span>
+      </div>
+    </div>
+  );
+}
+
+function TopStories({ stories }) {
+  if (!stories || stories.length === 0) return null;
+  return (
+    <div className="top-stories">
+      <h2 className="section-head">⭐ Top-Stories heute</h2>
+      {stories.map((s, i) => (
+        <div className={`top-story rank-${i + 1}`} key={i}>
+          <div className="rank">{i + 1}</div>
+          <div className="content">
+            <div className="head">
+              <ScoreBadge score={s.score} />
+              <SourceBadge source={s.source} />
+              {s.url ? (
+                <a href={s.url} target="_blank" rel="noreferrer">{s.title}</a>
+              ) : (
+                <span>{s.title}</span>
+              )}
+            </div>
+            {s.summary && <div className="story-summary">{s.summary}</div>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SectionCard({ section, isMarket }) {
   const hasContent =
     section.lines?.length || section.commentary || section.items?.length;
   if (!hasContent) return null;
+
   return (
-    <div className="card section">
-      <h2>{section.title}</h2>
-      {section.lines?.length > 0 && (
+    <div className={`card section ${isMarket ? "market-section" : ""}`}>
+      <h2 className="section-head">{section.title}</h2>
+
+      {isMarket && section.lines?.length > 0 && (
         <div className="lines">
           {section.lines.map((l, i) => (
             <div className="line" key={i}>{l}</div>
           ))}
         </div>
       )}
+
+      {!isMarket && section.lines?.length > 0 && (
+        <div className="lines">
+          {section.lines.map((l, i) => (
+            <div className="line" key={i}>{l}</div>
+          ))}
+        </div>
+      )}
+
       {section.commentary && <p className="commentary">{section.commentary}</p>}
+
       {section.items?.length > 0 && (
         <ul className="items">
           {section.items.map((it, i) => (
             <li key={i}>
               <div className="item-head">
                 <ScoreBadge score={it.score} />
+                <SourceBadge source={it.source} />
                 {it.url ? (
                   <a href={it.url} target="_blank" rel="noreferrer">{it.title}</a>
                 ) : (
@@ -50,28 +195,51 @@ function SectionCard({ section }) {
   );
 }
 
-function BriefingView({ data, error }) {
+function BriefingView({ data, error, marketHistory }) {
   if (error) return <div className="card empty">📄 {error}</div>;
   if (!data) return <div className="card empty">⏳ Lade Briefing …</div>;
+
+  const marketSection = data.sections?.find((s) => s.key === "markets");
+  const hasMarketChart = data.market_chart?.length > 0;
+
   return (
     <>
-      <div className="card meta">
-        <div>
-          <strong>{data.date}</strong>
-          <span className="muted"> · erzeugt {data.generated_at}</span>
+      <StatsHeader stats={data.stats} date={data.date} generated={data.generated_at} />
+      <TopStories stories={data.top_stories} />
+
+      {hasMarketChart && (
+        <div className="card chart-card">
+          <h2 className="section-head">
+            📊 Märkte
+            {marketHistory?.DAX?.length > 1 && (
+              <span className="sparkline-wrap">
+                <small>DAX 14 Tage:</small>
+                <Sparkline points={marketHistory.DAX} />
+              </span>
+            )}
+          </h2>
+          <MarketChart marketData={data.market_chart} />
+          {marketSection?.commentary && (
+            <p className="commentary">{marketSection.commentary}</p>
+          )}
         </div>
-      </div>
-      {data.sections?.map((s) => (
-        <SectionCard key={s.key} section={s} />
-      ))}
+      )}
+
+      {data.sections?.map((s) => {
+        if (s.key === "markets" && hasMarketChart) return null;
+        return <SectionCard key={s.key} section={s} />;
+      })}
     </>
   );
 }
+
+// ============ MAIN APP ============
 
 export default function App() {
   const [tab, setTab] = useState("briefing");
   const [latest, setLatest] = useState(null);
   const [latestError, setLatestError] = useState(null);
+  const [marketHistory, setMarketHistory] = useState({});
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedData, setSelectedData] = useState(null);
@@ -101,13 +269,18 @@ export default function App() {
       const [b, st] = await Promise.all([api.briefings(), api.status()]);
       setDates(b.briefings);
       setStatus(st);
-    } catch { /* Server nicht erreichbar */ }
+    } catch { /* offline */ }
   }, []);
 
   const loadLatest = useCallback(async () => {
     try {
       setLatest(await api.latest());
       setLatestError(null);
+      // Sparkline-Daten laden (DAX)
+      try {
+        const mh = await api.marketHistory("DAX");
+        setMarketHistory({ DAX: mh.history });
+      } catch { /* noch keine Historie */ }
     } catch (e) {
       setLatest(null);
       setLatestError(e.message);
@@ -130,7 +303,7 @@ export default function App() {
             await refreshCore();
             showToast(s.error ? "Lauf fehlgeschlagen – siehe Status-Tab" : "Briefing aktualisiert ✓");
           }
-        } catch { /* weiterpollen */ }
+        } catch { /* weiter */ }
       }, 3000);
     }
     return () => pollRef.current && clearInterval(pollRef.current);
@@ -166,7 +339,7 @@ export default function App() {
     setBusy(true);
     try {
       await api.saveConfig(configText);
-      showToast("config.yaml gespeichert (Backup: config.yaml.bak) ✓");
+      showToast("config.yaml gespeichert ✓");
       await refreshCore();
     } catch (e) {
       showToast(e.message, true);
@@ -260,9 +433,7 @@ export default function App() {
       <header>
         <div>
           <h1>🌅 Morning Briefing</h1>
-          <div className="sub">
-            Creglingen &amp; 50 km · Weltwirtschaft · Tech · KI
-          </div>
+          <div className="sub">Creglingen &amp; 50 km · Welt · Tech · KI</div>
         </div>
         <div className="actions">
           <span className={`dot ${status?.runner?.running ? "run" : "idle"}`} />
@@ -274,44 +445,42 @@ export default function App() {
 
       <nav>
         {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? "active" : ""}
-            onClick={() => setTab(t.id)}
-          >
+          <button key={t.id} className={tab === t.id ? "active" : ""} onClick={() => setTab(t.id)}>
             {t.label}
           </button>
         ))}
       </nav>
 
       <main>
-        {tab === "briefing" && <BriefingView data={latest} error={latestError} />}
+        {tab === "briefing" && (
+          <BriefingView data={latest} error={latestError} marketHistory={marketHistory} />
+        )}
 
         {tab === "alerts" && (
           <>
             <div className="card">
-              <h2>🔔 Keyword-Alerts</h2>
+              <h2 className="section-head">🔔 Keyword-Alerts</h2>
               <p className="muted">
                 Benachrichtigung (Telegram + Briefing), wenn ein Begriff in einer
-                Quelle auftaucht. Quelle "*" = alle Quellen.
+                Quelle auftaucht. "*" = alle Quellen.
               </p>
               <div className="fb-form">
                 <input
                   value={alertTerm}
-                  placeholder="z. B. Zwangsversteigerung, Server, MacBook…"
+                  placeholder="z. B. Zwangsversteigerung, Server…"
                   onChange={(e) => setAlertTerm(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addAlert()}
                 />
                 <select value={alertSource} onChange={(e) => setAlertSource(e.target.value)}>
-                  <option value="*">Alle Quellen</option>
-                  <option value="local_news">Lokale News</option>
-                  <option value="zoll-auktion">Zoll-Auktion</option>
-                  <option value="google-news">Google News</option>
+                  <option value="*">Alle</option>
+                  <option value="local_news">Lokal</option>
+                  <option value="zoll-auktion">Zoll</option>
+                  <option value="google-news">News</option>
                   <option value="ebay">eBay</option>
                   <option value="github-trending">GitHub</option>
-                  <option value="hackernews">Hacker News</option>
+                  <option value="hackernews">HN</option>
                 </select>
-                <button className="primary" onClick={addAlert}>＋ Hinzufügen</button>
+                <button className="primary" onClick={addAlert}>＋</button>
               </div>
               {alerts.length > 0 ? (
                 <div className="chips">
@@ -323,62 +492,49 @@ export default function App() {
                   ))}
                 </div>
               ) : (
-                <div className="muted">Noch keine Alerts – lege einen an!</div>
+                <div className="muted">Noch keine Alerts.</div>
               )}
             </div>
-
             <div className="card">
-              <h2>💰 Preis-Tracker (eBay)</h2>
-              <p className="muted">
-                Beobachtet eBay-Suchen. Wenn der niedrigste Preis dein Limit
-                unterschreitet → Alert. (Benötigt eBay-Token in Einstellungen.)
-              </p>
+              <h2 className="section-head">💰 Preis-Tracker (eBay)</h2>
+              <p className="muted">Beobachtet eBay-Suchen. Unterschreitet der niedrigste
+              Preis dein Limit → Alert. (Benötigt eBay-Token.)</p>
               <div className="fb-form">
                 <input
                   value={watchQuery}
-                  placeholder="z. B. homelab server, ThinkPad…"
+                  placeholder="z. B. homelab server"
                   onChange={(e) => setWatchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addWatch()}
                 />
                 <input
-                  type="number"
-                  value={watchThreshold}
-                  placeholder="Limit (EUR)"
-                  style={{ maxWidth: 120 }}
+                  type="number" value={watchThreshold} placeholder="Limit €"
+                  style={{ maxWidth: 100 }}
                   onChange={(e) => setWatchThreshold(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addWatch()}
                 />
-                <button className="primary" onClick={addWatch}>＋ Beobachten</button>
+                <button className="primary" onClick={addWatch}>＋</button>
               </div>
               {watches.length > 0 ? (
                 <table className="watch-table">
-                  <thead>
-                    <tr>
-                      <th>Suche</th><th>Limit</th><th>Letzter Preis</th><th>Gefunden</th><th></th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th>Suche</th><th>Limit</th><th>Letzter</th><th>Titel</th><th></th></tr></thead>
                   <tbody>
                     {watches.map((w) => (
                       <tr key={w.id}>
                         <td>{w.query}</td>
                         <td>{w.threshold > 0 ? `${w.threshold} €` : "–"}</td>
-                        <td>
-                          {w.last_price !== null ? (
-                            <a href={w.last_url} target="_blank" rel="noreferrer">
-                              {w.last_price.toFixed(2)} €
-                            </a>
-                          ) : "–"}
-                        </td>
-                        <td className="muted">{w.last_title?.slice(0, 40) || "–"}</td>
-                        <td>
-                          <button className="chip-del" onClick={() => removeWatch(w.id)}>✕</button>
-                        </td>
+                        <td>{w.last_price !== null ? (
+                          <a href={w.last_url} target="_blank" rel="noreferrer">
+                            {w.last_price.toFixed(2)} €
+                          </a>
+                        ) : "–"}</td>
+                        <td className="muted">{w.last_title?.slice(0, 35) || "–"}</td>
+                        <td><button className="chip-del" onClick={() => removeWatch(w.id)}>✕</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div className="muted">Noch keine Beobachtungen aktiv.</div>
+                <div className="muted">Noch keine Watches.</div>
               )}
             </div>
           </>
@@ -387,7 +543,7 @@ export default function App() {
         {tab === "archive" && (
           <div className="archive">
             <div className="card">
-              <h2>🗂️ Verfügbare Briefings</h2>
+              <h2 className="section-head">🗂️ Briefings</h2>
               {dates.length === 0 && <div className="muted">Noch keine gespeichert.</div>}
               <ul className="date-list">
                 {dates.map((d) => (
@@ -401,7 +557,7 @@ export default function App() {
             </div>
             {selectedDate && (
               <div className="archive-detail">
-                <h2>Briefing vom {selectedDate}</h2>
+                <h2>{selectedDate}</h2>
                 {selectedData?.sections?.map((s) => (
                   <SectionCard key={s.key} section={s} />
                 ))}
@@ -412,29 +568,25 @@ export default function App() {
 
         {tab === "status" && (
           <div className="card">
-            <h2>📊 Status</h2>
+            <h2 className="section-head">📊 Status</h2>
             {status ? (
               <>
                 <div className="kv">
                   <span>Geplante Laufzeit</span><strong>{status.run_time}</strong>
                   <span>Region</span><strong>{status.region}</strong>
                   <span>Telegram</span>
-                  <strong>{status.telegram_configured ? "✅ konfiguriert" : "⚠️ nicht gesetzt"}</strong>
+                  <strong>{status.telegram_configured ? "✅" : "⚠️ nicht gesetzt"}</strong>
                   <span>Gemini KI</span>
-                  <strong>{status.gemini_configured ? "✅ konfiguriert" : "⚠️ nicht gesetzt"}</strong>
+                  <strong>{status.gemini_configured ? "✅" : "⚠️ nicht gesetzt"}</strong>
                   <span>Letztes Briefing</span><strong>{status.latest_briefing ?? "–"}</strong>
-                  <span>Läufe insgesamt</span><strong>{status.runner.runs_total}</strong>
                 </div>
-                <h3>Quellen (letzter Lauf)</h3>
+                <h3>Quellen</h3>
                 <div className="chips">
                   {Object.entries(status.latest_sources).map(([k, v]) => (
-                    <span key={k} className={`chip ${v === "ok" ? "good" : "bad"}`}>
-                      {v === "ok" ? "✓" : "✗"} {k}
+                    <span key={k} className={`chip ${v === "ok" ? "good" : v.includes("Treffer") ? "hot" : "bad"}`}>
+                      {v === "ok" ? "✓" : v.includes("fehler") ? "✗" : "🔔"} {k}: {v}
                     </span>
                   ))}
-                  {Object.keys(status.latest_sources).length === 0 && (
-                    <span className="muted">Noch keine Laufdaten.</span>
-                  )}
                 </div>
                 <h3>Module</h3>
                 <div className="chips">
@@ -446,15 +598,13 @@ export default function App() {
                 </div>
                 {status.runner.log && (
                   <>
-                    <h3>Log (letzte 80 Zeilen)</h3>
-                    <pre className="log">
-                      {status.runner.log.split("\n").slice(-80).join("\n")}
-                    </pre>
+                    <h3>Log</h3>
+                    <pre className="log">{status.runner.log.split("\n").slice(-80).join("\n")}</pre>
                   </>
                 )}
               </>
             ) : (
-              <div className="muted">⏳ Lade Status …</div>
+              <div className="muted">⏳ Lade …</div>
             )}
           </div>
         )}
@@ -462,54 +612,32 @@ export default function App() {
         {tab === "settings" && (
           <>
             <div className="card">
-              <h2>⚙️ config.yaml</h2>
-              <p className="muted">
-                Orte, Uhrzeit, Module, Filter. Nach dem Speichern greift die
-                Uhrzeit sofort; Module beim nächsten Lauf.
-              </p>
+              <h2 className="section-head">⚙️ config.yaml</h2>
               <textarea value={configText} onChange={(e) => setConfigText(e.target.value)} rows={18} />
-              <button className="primary" disabled={busy} onClick={saveConfig}>
-                💾 Speichern
-              </button>
+              <button className="primary" disabled={busy} onClick={saveConfig}>💾 Speichern</button>
             </div>
             <div className="card">
-              <h2>🔑 Zugangsdaten (.env)</h2>
-              <p className="muted">
-                Format: KEY=WERT. Gesetzte Werte erscheinen als ***. Erlaubt:
-                TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN.
-              </p>
+              <h2 className="section-head">🔑 Zugangsdaten (.env)</h2>
+              <p className="muted">Gesetzte Werte erscheinen als ***. Erlaubt: TELEGRAM_BOT_TOKEN,
+              TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN.</p>
               <textarea value={envText} onChange={(e) => setEnvText(e.target.value)} rows={6} />
-              <button className="primary" disabled={busy} onClick={saveEnv}>
-                💾 Speichern
-              </button>
+              <button className="primary" disabled={busy} onClick={saveEnv}>💾 Speichern</button>
             </div>
             <div className="card">
-              <h2>🧠 KI-Feedback</h2>
-              <p className="muted">
-                Vorlieben fließen direkt in die KI-Bewertung zukünftiger Läufe.
-              </p>
+              <h2 className="section-head">🧠 KI-Feedback</h2>
               <div className="fb-form">
                 <select value={fbKind} onChange={(e) => setFbKind(e.target.value)}>
-                  <option value="positive">👍 mag ich</option>
-                  <option value="negative">👎 nicht relevant</option>
+                  <option value="positive">👍</option>
+                  <option value="negative">👎</option>
                 </select>
-                <input
-                  value={fbText}
-                  placeholder="z. B. Mehr Homelab-Hardware-Auktionen"
-                  onChange={(e) => setFbText(e.target.value)}
-                />
-                <button className="primary" onClick={saveFeedback}>Hinzufügen</button>
+                <input value={fbText} placeholder="Vorliebe/Ablehnung"
+                  onChange={(e) => setFbText(e.target.value)} />
+                <button className="primary" onClick={saveFeedback}>＋</button>
               </div>
-              {feedback.positive.length > 0 && (
-                <div className="chips">
-                  {feedback.positive.map((t, i) => <span key={i} className="chip good">+ {t}</span>)}
-                </div>
-              )}
-              {feedback.negative.length > 0 && (
-                <div className="chips">
-                  {feedback.negative.map((t, i) => <span key={i} className="chip off">− {t}</span>)}
-                </div>
-              )}
+              <div className="chips" style={{ marginTop: 8 }}>
+                {feedback.positive?.map((t, i) => <span key={i} className="chip good">+ {t}</span>)}
+                {feedback.negative?.map((t, i) => <span key={i} className="chip off">− {t}</span>)}
+              </div>
             </div>
           </>
         )}
