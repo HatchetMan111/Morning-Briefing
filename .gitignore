@@ -1,0 +1,8 @@
+.env
+.env.bak
+config.yaml.bak
+data/
+__pycache__/
+*.pyc
+*.log
+node_modules/

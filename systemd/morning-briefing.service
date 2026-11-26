@@ -1,0 +1,18 @@
+[Unit]
+Description=Morning Briefing - Web UI + Scheduler
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/morning-briefing
+Environment=PYTHONUNBUFFERED=1
+Environment=PORT=__PORT__
+ExecStart=/opt/morning-briefing/venv/bin/python -m uvicorn server.app:app --host 0.0.0.0 --port __PORT__
+Restart=always
+RestartSec=5
+# Hartes Absichern gegen hängende Laeufe
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

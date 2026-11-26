@@ -1,0 +1,114 @@
+# ============================================================
+# MORNING BRIEFING – ZENTRALE KONFIGURATION
+# Alle Einstellungen hier anpassen – keine Code-Änderungen nötig.
+# Nach Änderungen: Container neu starten (docker compose up -d --force-recreate)
+# ============================================================
+
+region:
+  center_zip: "97993"
+  center_city: "Creglingen"
+  # Orte im ~50-km-Umkreis – Basis für alle lokalen Module
+  towns:
+    - Creglingen
+    - Rothenburg ob der Tauber
+    - Bad Mergentheim
+    - Weikersheim
+    - Tauberbischofsheim
+    - Lauda-Königshofen
+    - Boxberg
+    - Osterburken
+    - Uffenheim
+    - Aub
+    - Crailsheim
+    - Würzburg
+    - Ansbach
+  county_terms:
+    - Main-Tauber-Kreis
+
+run:
+  time: "04:30"            # Tageszeit für das Briefing (Europe/Berlin)
+  timezone: "Europe/Berlin"
+
+# Module: Reihenfolge hier = Reihenfolge im Briefing
+modules:
+  markets:          { enabled: true }
+  econ_calendar:    { enabled: true }
+  local_news:      { enabled: true }
+  auctions:        { enabled: true }
+  companies:       { enabled: true }
+  ai_news:         { enabled: true }
+  selfhosted:      { enabled: true }
+  github_trending: { enabled: true }
+  kleinanzeigen:   { enabled: false }   # erst aktivieren, wenn Such-URLs gepflegt sind
+
+# ---------- Modul-Einstellungen ----------
+
+markets:
+  indices:
+    - { label: "DAX",             ticker: "^GDAXI" }
+    - { label: "Dow Jones",       ticker: "^DJI" }
+    - { label: "Nasdaq Composite", ticker: "^IXIC" }
+    - { label: "Nasdaq 100",      ticker: "^NDX" }
+    - { label: "EuroStoxx 50",   ticker: "^STOXX50E" }
+    - { label: "Gold",           ticker: "GC=F" }
+    - { label: "EUR/USD",         ticker: "EURUSD=X" }
+    - { label: "Bitcoin",         ticker: "BTC-USD" }
+
+econ_calendar:
+  countries: ["USD", "EUR", "DEU", "GBP", "CNY", "JPY", "FOMC"]
+  impacts: ["High"]          # Medium für EUR/DEU wird automatisch ergänzt
+  max_events: 10
+
+local_news:
+  window_days: 2             # nur News der letzten X Tage
+  max_per_town: 8            # sanftes Limit pro Orts-Query
+
+auctions:
+  window_days: 14            # Versteigerungen haben längeren Vorlauf
+  towns_for_zvg: 6           # die X nächsten Orte für Zwangsversteigerungs-Suche
+  # eBay Browse API (optional, freies Developer-Konto: developer.ebay.com)
+  # Bearer-Token in .env als EBAY_BEARER_TOKEN hinterlegen
+  ebay_searches: []          # z. B. ["homelab server", "proxmox"]
+  # Eigene RSS-Feeds lokaler Auktionshäuser (optional)
+  custom_rss_urls: []
+
+companies:
+  # Regional notierte Unternehmen (~50 km) – Tagesbewegung + News-Monitoring
+  listed:
+    - { ticker: "KAB.F", name: "Koenig & Bauer" }   # Würzburg (Yahoo: KAB.F)
+  move_threshold_pct: 3.0    # ab dieser Tagesbewegung wird die Firma hervorgehoben
+  founders_window_days: 7    # Zeitfenster für Neugründungs-Suche
+
+ai_news:
+  min_points_hn: 40           # Mindest-Upvotes für Hacker-News-Beiträge
+  max_arxiv: 8                # Anzahl neuester KI-Papers von arXiv
+
+selfhosted:
+  awesome_diff: true          # neue Einträge in awesome-selfhosted entdecken
+  show_hn: true               # Show HN nach Homelab-Themen filtern
+  reddit: false               # r/selfhosted – je nach IP blockiert, ggf. testen
+
+github_trending:
+  max_items: 20
+
+kleinanzeigen:
+  # ACHTUNG: kein offizielles API – sanft anfragen (1 Request/Tag je URL).
+  # Beispiele: https://www.kleinanzeigen.de/s-suchanlagen.html?...
+  search_urls: []
+  window_days: 1
+
+# ---------- KI (Gemini Flash, kostenloses Kontingent) ----------
+ai:
+  enabled: true
+  model: "gemini-2.0-flash"
+  rate_limit_seconds: 5      # Abstand zwischen API-Calls (Free-Tier schonen)
+  batch_size: 5              # Items pro API-Call
+  max_items_per_section: 8   # wie viele Items maximal je Abschnitt ins Briefing
+  commentary: true           # KI-Kommentar für Marktdaten/Kalender
+
+# ---------- Filter ----------
+filters:
+  blocked_keywords: []       # z. B. ["Werbung", "Gewinnspiel"]
+
+telegram:
+  enabled: true              # Token + Chat-ID stehen in .env
