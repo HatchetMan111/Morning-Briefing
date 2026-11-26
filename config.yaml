@@ -5,28 +5,31 @@
 # ============================================================
 
 region:
-  center_zip: "97993"
+  center_plz: "97993"
   center_city: "Creglingen"
-  # Orte im ~50-km-Umkreis – Basis für alle lokalen Module
+  # Orte mit PLZ im ~50-km-Umkreis – für präzise lokale Suche
   towns:
-    - Creglingen
-    - Rothenburg ob der Tauber
-    - Bad Mergentheim
-    - Weikersheim
-    - Tauberbischofsheim
-    - Lauda-Königshofen
-    - Boxberg
-    - Osterburken
-    - Uffenheim
-    - Aub
-    - Crailsheim
-    - Würzburg
-    - Ansbach
+    - { name: "Creglingen",              plz: "97993" }
+    - { name: "Rothenburg ob der Tauber", plz: "91541" }
+    - { name: "Bad Mergentheim",         plz: "97980" }
+    - { name: "Weikersheim",             plz: "97990" }
+    - { name: "Tauberbischofsheim",      plz: "97941" }
+    - { name: "Lauda-Königshofen",       plz: "97922" }
+    - { name: "Boxberg",                 plz: "97944" }
+    - { name: "Osterburken",             plz: "74706" }
+    - { name: "Uffenheim",               plz: "97215" }
+    - { name: "Aub",                     plz: "97230" }
+    - { name: "Crailsheim",              plz: "74532" }
+    - { name: "Würzburg",                plz: "97070" }
+    - { name: "Ansbach",                 plz: "91522" }
   county_terms:
     - Main-Tauber-Kreis
 
 run:
-  time: "04:30"            # Tageszeit für das Briefing (Europe/Berlin)
+  # Mehrere Laufzeiten pro Tag (Europe/Berlin)
+  times:
+    - "09:00"
+    - "18:00"
   timezone: "Europe/Berlin"
 
 # Module: Reihenfolge hier = Reihenfolge im Briefing
@@ -36,6 +39,7 @@ modules:
   local_news:      { enabled: true }
   auctions:        { enabled: true }
   zoll_auktion:    { enabled: true }
+  mydealz:         { enabled: true }
   companies:       { enabled: true }
   ai_news:         { enabled: true }
   selfhosted:      { enabled: true }
@@ -113,6 +117,11 @@ kleinanzeigen:
 zoll_auktion:
   # Offizielle Zoll-Auktionen (zoll-auktion.de) – HTML-Scraping
   max_pages: 3              # wie viele Übersichtsseiten (12 Items pro Seite)
+
+mydealz:
+  # Beste Deals von mydealz.de (RSS-Feed, keine Auth nötig)
+  max_items: 12             # wie viele der heißesten Deals
+  min_price: 0              # Mindestpreis (0 = alle)
 
 # ---------- KI (Gemini Flash, kostenloses Kontingent) ----------
 ai:

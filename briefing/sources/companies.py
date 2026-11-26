@@ -25,13 +25,22 @@ def _movers(listed: list[dict], threshold: float) -> list[str]:
 
 
 def _news_queries(cfg: dict) -> list[tuple[str, int, str]]:
-    """(Query, Zeitfenster in Tagen, Quelle) –ortsbezogene Firmennachrichten."""
+    """(Query, Zeitfenster in Tagen, Quelle) – ortsbezogene Firmennachrichten."""
     region = cfg["region"]
     ccfg = cfg.get("companies", {})
     founders_window = ccfg.get("founders_window_days", 7)
 
+    # Ortsliste extrahieren (unterstützt string und dict Format)
+    raw_towns = region.get("towns", [])
+    town_names = []
+    for t in raw_towns:
+        if isinstance(t, dict):
+            town_names.append(t.get("name", ""))
+        else:
+            town_names.append(str(t))
+
     queries: list[tuple[str, int, str]] = []
-    for town in region.get("towns", [])[:8]:
+    for town in [t for t in town_names if t][:8]:
         queries.append((
             f'"{town}" (Neugründung OR Startup OR "neues Unternehmen" '
             f"OR Eröffnung OR eröffnet)",

@@ -64,6 +64,14 @@ def _build_prompt(batch: list[dict], context: str, fb_prompt: str) -> str:
 - Bahnbrechende KI- und Tech-Entwicklungen
 - Self-Hosting-Tools mit eindeutigem Mehrwert fuer ein Homelab
 
+# Spezielle Typen:
+- GitHub-Repos: HOEHER bewerten wenn self-hostbar, Docker-Compose
+  verfuegbar, gute Dokumentation, anfaengerfreundlich (Score 80-95)
+- MyDealz: HOEHER bewerten bei echtem Sparpotenzial, Tech/Homelab-
+  relevant, Alltagsnutzen (Score 80-95); NIEDRIGER bei reinen
+  Reise-/Urlaubsdeals ohne Bezug zum Nutzer
+- Zoll-Auktionen: bewerten nach Standortnaehe und Preis-Leistung
+
 Schreibe je Item eine kurze deutsche Zusammenfassung (max. 18 Woerter).
 Antworte NUR als JSON:
 {{"analyses": [{{"score": <int>, "summary": "<text>"}} ...]}}

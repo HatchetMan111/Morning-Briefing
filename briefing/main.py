@@ -34,6 +34,7 @@ def _sources() -> dict:
         kleinanzeigen,
         local_news,
         markets,
+        mydealz,
         selfhosted,
         zoll_auktion,
     )
@@ -43,6 +44,7 @@ def _sources() -> dict:
         "local_news": local_news,
         "auctions": auctions,
         "zoll_auktion": zoll_auktion,
+        "mydealz": mydealz,
         "companies": companies,
         "ai_news": ai_news,
         "selfhosted": selfhosted,
@@ -59,7 +61,9 @@ def _context() -> str:
 def _store_json(data: dict) -> pathlib.Path:
     out_dir = db.DATA / "briefings"
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{data['date']}.json"
+    # Dateiname mit Stunde -> mehrere Briefings pro Tag möglich
+    hour = data["generated_at"][11:13]  # "HH" aus ISO-Timestamp
+    path = out_dir / f"{data['date']}_{hour}.json"
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 

@@ -85,7 +85,17 @@ def _ebay(searches: list[str]) -> list[dict]:
 
 def fetch(cfg: dict) -> dict:
     acfg = cfg.get("auctions", {})
-    towns = cfg["region"]["towns"][: acfg.get("towns_for_zvg", 6)]
+
+    # Ortsliste extrahieren (unterstützt string und dict Format)
+    raw_towns = cfg["region"].get("towns", [])
+    towns = []
+    for t in raw_towns:
+        if isinstance(t, dict):
+            towns.append(t.get("name", ""))
+        else:
+            towns.append(str(t))
+    towns = [t for t in towns if t][: acfg.get("towns_for_zvg", 6)]
+
     window = acfg.get("window_days", 14)
 
     items = _zvg_items(towns, window)

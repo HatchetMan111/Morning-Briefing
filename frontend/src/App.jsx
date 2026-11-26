@@ -20,6 +20,7 @@ const SOURCE_META = {
   "r/selfhosted": { icon: "💙", label: "Reddit" },
   "ebay": { icon: "🛒", label: "eBay" },
   "price-watch": { icon: "💰", label: "Preis" },
+  "mydealz": { icon: "🔥", label: "Deal" },
   "zvg-news": { icon: "🏠", label: "ZVG" },
   "gruendung": { icon: "🏢", label: "Gründung" },
   "firma-news": { icon: "📈", label: "Firma" },
@@ -195,8 +196,17 @@ function SectionCard({ section, isMarket }) {
   );
 }
 
-function BriefingView({ data, error, marketHistory }) {
-  if (error) return <div className="card empty">📄 {error}</div>;
+function BriefingView({ data, error, marketHistory, isRunning }) {
+  if (isRunning && !data) {
+    return (
+      <div className="card empty generating">
+        <div className="gen-spinner" />
+        <h3>🌅 Briefing wird erstellt …</h3>
+        <p className="muted">Sammle News, Auktionen, Märkte und Deals.<br/>Das dauert ca. 2–3 Minuten.</p>
+      </div>
+    );
+  }
+  if (error && !isRunning) return <div className="card empty">📄 {error}</div>;
   if (!data) return <div className="card empty">⏳ Lade Briefing …</div>;
 
   const marketSection = data.sections?.find((s) => s.key === "markets");
@@ -269,6 +279,10 @@ export default function App() {
       const [b, st] = await Promise.all([api.briefings(), api.status()]);
       setDates(b.briefings);
       setStatus(st);
+      // Wenn ein Lauf läuft, runState setzen -> Polling startet
+      if (st.runner?.running) {
+        setRunState(st.runner);
+      }
     } catch { /* offline */ }
   }, []);
 
@@ -453,7 +467,12 @@ export default function App() {
 
       <main>
         {tab === "briefing" && (
-          <BriefingView data={latest} error={latestError} marketHistory={marketHistory} />
+          <BriefingView
+            data={latest}
+            error={latestError}
+            marketHistory={marketHistory}
+            isRunning={runState?.running}
+          />
         )}
 
         {tab === "alerts" && (
@@ -572,7 +591,8 @@ export default function App() {
             {status ? (
               <>
                 <div className="kv">
-                  <span>Geplante Laufzeit</span><strong>{status.run_time}</strong>
+                  <span>Laufzeiten</span>
+                  <strong>{(status.run_times || []).join(" · ")}</strong>
                   <span>Region</span><strong>{status.region}</strong>
                   <span>Telegram</span>
                   <strong>{status.telegram_configured ? "✅" : "⚠️ nicht gesetzt"}</strong>

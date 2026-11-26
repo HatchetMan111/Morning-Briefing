@@ -1,14 +1,29 @@
-"""Lokale News: Google News RSS je Ort/Landkreis, intelligent gefiltert.
+"""Lokale News: Google News RSS mit PLZ + Ortsname, intelligent gefiltert.
 
-Polizeiberichte und Unfälle werden per Ausschluss-Operatoren (-Begriff)
-schon in der Query eliminiert und zusätzlich hart vorfiltered.
+Queries kombinieren Postleitzahl UND Ortsname für präzisere Treffer.
+Polizeiberichte werden per Ausschluss-Operatoren eliminiert.
 """
 from briefing.sources._util import gn_feed, item, within_days
 
 
-def _build_query(town: str, excludes: list[str]) -> str:
-    """Google News Query mit Ausschluss-Begriffen."""
-    query = f'"{town}"'
+def _town_list(cfg: dict) -> list[tuple[str, str]]:
+    """Extrahiert (name, plz) Paare aus der Konfiguration."""
+    towns = cfg.get("region", {}).get("towns", [])
+    result = []
+    for t in towns:
+        if isinstance(t, dict):
+            result.append((t.get("name", ""), t.get("plz", "")))
+        else:
+            result.append((str(t), ""))
+    return result
+
+
+def _build_query(name: str, plz: str, excludes: list[str]) -> str:
+    """Google News Query mit PLZ, Ortsname und Ausschluss-Begriffen."""
+    if plz:
+        query = f'"{plz}" OR "{name}"'
+    else:
+        query = f'"{name}"'
     for ex in excludes:
         query += f' -"{ex}"'
     return query
@@ -21,19 +36,12 @@ def fetch(cfg: dict) -> dict:
     max_per_town = ln_cfg.get("max_per_town", 8)
     excludes = ln_cfg.get("exclude_keywords", [])
 
+    towns = _town_list(cfg)
     queries = []
     for term in region.get("county_terms", []):
-        queries.append(_build_query(term, excludes))
-    for town in region.get("towns", []):
-        queries.append(_build_query(town, excludes))
-
-    # Lokale Wirtschafts-/Community-Keywords bevorzugen
-    priority_patterns = [
-        "Wirtschaft", "Unternehmen", "Investition", "Eröffnung", "Projekt",
-        "Neueröffnung", "Auszeichnung", "Forschung", "Schule", "Kultur",
-        "Veranstaltung", "Stadtrat", "Gemeinderat", "Planung", "Zukunft",
-        "Digitalisierung", "Energie", "Klima", "Bahnhof", "Gewerbe",
-    ]
+        queries.append(_build_query(term, "", excludes))
+    for name, plz in towns:
+        queries.append(_build_query(name, plz, excludes))
 
     items = []
     for query in queries:

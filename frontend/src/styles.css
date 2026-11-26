@@ -304,6 +304,20 @@ button.primary:hover:not(:disabled) { filter: brightness(1.1); }
 }
 .toast.err { border-color: var(--bad); }
 
+/* ============ GENERATING STATE ============ */
+.card.empty.generating {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 60px 20px; text-align: center;
+}
+.card.empty.generating h3 { margin: 0; font-size: 1.2rem; }
+.gen-spinner {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 680px) {
   .market-row { grid-template-columns: 1fr 1fr; }

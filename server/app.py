@@ -96,7 +96,7 @@ def api_status():
     return {
         "app": "Morning Briefing",
         "version": app.version,
-        "run_time": cfg["run"]["time"],
+        "run_times": cfg.get("run", {}).get("times", [cfg.get("run", {}).get("time", "09:00")]),
         "region": cfg["region"]["center_city"],
         "modules": {
             k: v.get("enabled", False) for k, v in cfg.get("modules", {}).items()
