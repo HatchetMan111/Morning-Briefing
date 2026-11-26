@@ -3,6 +3,7 @@ import { api } from "./api.js";
 
 const TABS = [
   { id: "briefing", label: "🌅 Briefing" },
+  { id: "alerts", label: "🔔 Alerts" },
   { id: "archive", label: "🗂️ Archiv" },
   { id: "status", label: "📊 Status" },
   { id: "settings", label: "⚙️ Einstellungen" },
@@ -81,6 +82,12 @@ export default function App() {
   const [fbKind, setFbKind] = useState("positive");
   const [configText, setConfigText] = useState("");
   const [envText, setEnvText] = useState("");
+  const [alerts, setAlerts] = useState([]);
+  const [alertTerm, setAlertTerm] = useState("");
+  const [alertSource, setAlertSource] = useState("*");
+  const [watches, setWatches] = useState([]);
+  const [watchQuery, setWatchQuery] = useState("");
+  const [watchThreshold, setWatchThreshold] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
   const pollRef = useRef(null);
@@ -94,9 +101,7 @@ export default function App() {
       const [b, st] = await Promise.all([api.briefings(), api.status()]);
       setDates(b.briefings);
       setStatus(st);
-    } catch (e) {
-      /* Server nicht erreichbar */
-    }
+    } catch { /* Server nicht erreichbar */ }
   }, []);
 
   const loadLatest = useCallback(async () => {
@@ -114,7 +119,6 @@ export default function App() {
     refreshCore();
   }, [loadLatest, refreshCore]);
 
-  // Lauf-Status pollen, während ein Briefing läuft
   useEffect(() => {
     if (runState?.running) {
       pollRef.current = setInterval(async () => {
@@ -124,7 +128,7 @@ export default function App() {
           if (!s.running) {
             await loadLatest();
             await refreshCore();
-            showToast(s.error ? `Lauf fehlgeschlagen – siehe Status-Tab` : `Briefing aktualisiert ✓`);
+            showToast(s.error ? "Lauf fehlgeschlagen – siehe Status-Tab" : "Briefing aktualisiert ✓");
           }
         } catch { /* weiterpollen */ }
       }, 3000);
@@ -192,10 +196,64 @@ export default function App() {
     }
   };
 
+  const loadAlerts = async () => {
+    try {
+      const [a, w] = await Promise.all([api.alerts(), api.priceWatch()]);
+      setAlerts(a.alerts || []);
+      setWatches(w.watches || []);
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  };
+
   useEffect(() => {
     if (tab === "settings") loadSettings();
+    if (tab === "alerts") loadAlerts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  const addAlert = async () => {
+    if (!alertTerm.trim()) return;
+    try {
+      const res = await api.addAlert(alertTerm.trim(), alertSource);
+      setAlerts(res.alerts || []);
+      setAlertTerm("");
+      showToast(`Alert "${alertTerm}" gespeichert ✓`);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  };
+
+  const removeAlert = async (id) => {
+    try {
+      const res = await api.deleteAlert(id);
+      setAlerts(res.alerts || []);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  };
+
+  const addWatch = async () => {
+    if (!watchQuery.trim()) return;
+    try {
+      const res = await api.addPriceWatch(watchQuery.trim(), parseFloat(watchThreshold) || 0);
+      setWatches(res.watches || []);
+      setWatchQuery("");
+      setWatchThreshold("");
+      showToast(`Preis-Tracker "${watchQuery}" gespeichert ✓`);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  };
+
+  const removeWatch = async (id) => {
+    try {
+      const res = await api.deletePriceWatch(id);
+      setWatches(res.watches || []);
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  };
 
   return (
     <div className="app">
@@ -228,6 +286,103 @@ export default function App() {
 
       <main>
         {tab === "briefing" && <BriefingView data={latest} error={latestError} />}
+
+        {tab === "alerts" && (
+          <>
+            <div className="card">
+              <h2>🔔 Keyword-Alerts</h2>
+              <p className="muted">
+                Benachrichtigung (Telegram + Briefing), wenn ein Begriff in einer
+                Quelle auftaucht. Quelle "*" = alle Quellen.
+              </p>
+              <div className="fb-form">
+                <input
+                  value={alertTerm}
+                  placeholder="z. B. Zwangsversteigerung, Server, MacBook…"
+                  onChange={(e) => setAlertTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addAlert()}
+                />
+                <select value={alertSource} onChange={(e) => setAlertSource(e.target.value)}>
+                  <option value="*">Alle Quellen</option>
+                  <option value="local_news">Lokale News</option>
+                  <option value="zoll-auktion">Zoll-Auktion</option>
+                  <option value="google-news">Google News</option>
+                  <option value="ebay">eBay</option>
+                  <option value="github-trending">GitHub</option>
+                  <option value="hackernews">Hacker News</option>
+                </select>
+                <button className="primary" onClick={addAlert}>＋ Hinzufügen</button>
+              </div>
+              {alerts.length > 0 ? (
+                <div className="chips">
+                  {alerts.map((a) => (
+                    <span key={a.id} className="chip good">
+                      🔍 {a.term} <small>({a.source_filter})</small>
+                      <button className="chip-del" onClick={() => removeAlert(a.id)}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="muted">Noch keine Alerts – lege einen an!</div>
+              )}
+            </div>
+
+            <div className="card">
+              <h2>💰 Preis-Tracker (eBay)</h2>
+              <p className="muted">
+                Beobachtet eBay-Suchen. Wenn der niedrigste Preis dein Limit
+                unterschreitet → Alert. (Benötigt eBay-Token in Einstellungen.)
+              </p>
+              <div className="fb-form">
+                <input
+                  value={watchQuery}
+                  placeholder="z. B. homelab server, ThinkPad…"
+                  onChange={(e) => setWatchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addWatch()}
+                />
+                <input
+                  type="number"
+                  value={watchThreshold}
+                  placeholder="Limit (EUR)"
+                  style={{ maxWidth: 120 }}
+                  onChange={(e) => setWatchThreshold(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addWatch()}
+                />
+                <button className="primary" onClick={addWatch}>＋ Beobachten</button>
+              </div>
+              {watches.length > 0 ? (
+                <table className="watch-table">
+                  <thead>
+                    <tr>
+                      <th>Suche</th><th>Limit</th><th>Letzter Preis</th><th>Gefunden</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {watches.map((w) => (
+                      <tr key={w.id}>
+                        <td>{w.query}</td>
+                        <td>{w.threshold > 0 ? `${w.threshold} €` : "–"}</td>
+                        <td>
+                          {w.last_price !== null ? (
+                            <a href={w.last_url} target="_blank" rel="noreferrer">
+                              {w.last_price.toFixed(2)} €
+                            </a>
+                          ) : "–"}
+                        </td>
+                        <td className="muted">{w.last_title?.slice(0, 40) || "–"}</td>
+                        <td>
+                          <button className="chip-del" onClick={() => removeWatch(w.id)}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="muted">Noch keine Beobachtungen aktiv.</div>
+              )}
+            </div>
+          </>
+        )}
 
         {tab === "archive" && (
           <div className="archive">
@@ -320,9 +475,8 @@ export default function App() {
             <div className="card">
               <h2>🔑 Zugangsdaten (.env)</h2>
               <p className="muted">
-                Format: KEY=WERT (eine Zeile pro Schlüssel). Gesetzte Werte
-                werden als *** angezeigt – zum Ändern neuen Wert eintragen.
-                Erlaubt: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN.
+                Format: KEY=WERT. Gesetzte Werte erscheinen als ***. Erlaubt:
+                TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN.
               </p>
               <textarea value={envText} onChange={(e) => setEnvText(e.target.value)} rows={6} />
               <button className="primary" disabled={busy} onClick={saveEnv}>

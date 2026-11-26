@@ -2,7 +2,7 @@
 import pathlib
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -31,6 +31,16 @@ class ConfigUpdate(BaseModel):
 
 class EnvUpdate(BaseModel):
     env: str
+
+
+class AlertCreate(BaseModel):
+    term: str
+    source_filter: str = "*"
+
+
+class PriceWatchCreate(BaseModel):
+    query: str
+    threshold: float = 0
 
 
 # ---------------- Scheduler ----------------
@@ -113,6 +123,60 @@ def api_feedback_add(fb: Feedback):
         raise HTTPException(400, "text darf nicht leer sein.")
     db.add_feedback(fb.kind, fb.text.strip())
     return db.load_feedback()
+
+
+# ---------------- Keyword-Alerts ----------------
+@app.get("/api/alerts")
+def api_alerts():
+    return {"alerts": db.get_alerts(active_only=False)}
+
+
+@app.post("/api/alerts")
+def api_alert_add(a: AlertCreate):
+    if not a.term.strip():
+        raise HTTPException(400, "term darf nicht leer sein.")
+    db.add_alert(a.term, a.source_filter)
+    return {"alerts": db.get_alerts(active_only=False)}
+
+
+@app.delete("/api/alerts/{alert_id}")
+def api_alert_delete(alert_id: int):
+    if not db.delete_alert(alert_id):
+        raise HTTPException(404, f"Alert {alert_id} nicht gefunden.")
+    return {"alerts": db.get_alerts(active_only=False)}
+
+
+# ---------------- Preis-Tracker ----------------
+@app.get("/api/price-watch")
+def api_price_watch():
+    return {"watches": db.get_price_watches(active_only=False)}
+
+
+@app.post("/api/price-watch")
+def api_price_watch_add(pw: PriceWatchCreate):
+    if not pw.query.strip():
+        raise HTTPException(400, "query darf nicht leer sein.")
+    db.add_price_watch(pw.query, pw.threshold)
+    return {"watches": db.get_price_watches(active_only=False)}
+
+
+@app.delete("/api/price-watch/{watch_id}")
+def api_price_watch_delete(watch_id: int):
+    if not db.delete_price_watch(watch_id):
+        raise HTTPException(404, f"Watch {watch_id} nicht gefunden.")
+    return {"watches": db.get_price_watches(active_only=False)}
+
+
+# ---------------- RSS-Feed ----------------
+@app.get("/feed.xml")
+def rss_feed(request: Request):
+    from fastapi.responses import Response
+
+    from server.feed import generate_feed
+
+    base_url = str(request.base_url).rstrip("/")
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + generate_feed(base_url)
+    return Response(content=xml, media_type="application/rss+xml")
 
 
 # ---------------- Konfiguration (config.yaml) ----------------

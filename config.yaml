@@ -35,6 +35,7 @@ modules:
   econ_calendar:    { enabled: true }
   local_news:      { enabled: true }
   auctions:        { enabled: true }
+  zoll_auktion:    { enabled: true }
   companies:       { enabled: true }
   ai_news:         { enabled: true }
   selfhosted:      { enabled: true }
@@ -96,6 +97,10 @@ kleinanzeigen:
   # Beispiele: https://www.kleinanzeigen.de/s-suchanlagen.html?...
   search_urls: []
   window_days: 1
+
+zoll_auktion:
+  # Offizielle Zoll-Auktionen (zoll-auktion.de) – HTML-Scraping
+  max_pages: 3              # wie viele Übersichtsseiten (12 Items pro Seite)
 
 # ---------- KI (Gemini Flash, kostenloses Kontingent) ----------
 ai:

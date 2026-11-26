@@ -18,6 +18,23 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind, text }),
     }).then(handle),
+  alerts: () => fetch("/api/alerts").then(handle),
+  addAlert: (term, source_filter) =>
+    fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ term, source_filter }),
+    }).then(handle),
+  deleteAlert: (id) => fetch(`/api/alerts/${id}`, { method: "DELETE" }).then(handle),
+  priceWatch: () => fetch("/api/price-watch").then(handle),
+  addPriceWatch: (query, threshold) =>
+    fetch("/api/price-watch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, threshold }),
+    }).then(handle),
+  deletePriceWatch: (id) =>
+    fetch(`/api/price-watch/${id}`, { method: "DELETE" }).then(handle),
   config: () => fetch("/api/config").then(handle),
   saveConfig: (yaml) =>
     fetch("/api/config", {

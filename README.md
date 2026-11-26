@@ -1,11 +1,23 @@
 # 🌅 Morning Briefing – Proxmox LXC
 
 Tägliches, automatisches Briefing mit **eigener Web-UI** – vollständig lokal im
-eigenen Netz. Sammelt Lokal-News (Creglingen & 50 km), Auktionen & Firmen der
-Region, Börsen (DAX/Dow/Nasdaq mit Tagesgewinnern), Wirtschaftskalender,
-KI-News, Self-Hosting-Perlen und GitHub Trending. Die KI (Gemini Flash,
-optional) bewertet alles nach deinem Profil; Zustellung per Telegram und/oder
-Web-UI. Jedes Briefing wird als JSON + HTML archiviert.
+eigenen Netz. Sammelt Lokal-News (Creglingen & 50 km), **Zoll-Auktionen**
+(zoll-auktion.de), Auktionen & Firmen der Region, Börsen (DAX/Dow/Nasdaq mit
+Tagesgewinnern), Wirtschaftskalender, KI-News, Self-Hosting-Perlen und GitHub
+Trending. Die KI (Gemini Flash, optional) bewertet alles nach deinem Profil;
+Zustellung per Telegram und/oder Web-UI. Jedes Briefing wird als JSON + HTML
+archiviert und ist als **RSS-Feed** abonnierbar.
+
+**Features:**
+- 🔔 **Keyword-Alerts** – "Benachrichtige mich wenn [Begriff] in [Quelle]
+  auftaucht" (z.B. "Server" in Zoll-Auktionen, "Zwangsversteigerung" in
+  Lokal-News). Sofortige Telegram-Benachrichtigung + Briefing-Abschnitt.
+- 🏛️ **Zoll-Auktion.de** – offizielle Versteigerungen von Bund/Ländern direkt
+  als Quelle (Preis, Gebote, Restzeit, Standort)
+- 📡 **RSS-Feed** – `/feed.xml` für jeden RSS-Reader
+- 💰 **Preis-Tracker** – eBay-Suchen beobachten, bei Schwellenwert alarmieren
+- ⚙️ **Web-UI** – React/Vite (4+1 Tabs: Briefing, Alerts, Archiv, Status,
+  Einstellungen) mit "Jetzt starten"-Button und Log-Anzeige
 
 **Stack:** Python 3 / FastAPI · SQLite · React 18 + Vite (dist ist committet –
 der Container braucht **kein Node.js**)
@@ -72,12 +84,15 @@ offen. Ressourcen sind bewusst klein – läuft auch auf Mini-Hardware.
 | Tab | Funktion |
 |---|---|
 | 🌅 Briefing | Aktuelles Briefing: Sektionen, Fakten-Zeilen, KI-Kommentar, Items mit Relevanz-Score |
+| 🔔 Alerts | Keyword-Alerts + Preis-Tracker verwalten: anlegen, löschen, aktueller Stand |
 | 🗂️ Archiv | Alle gespeicherten Tage, anklickbar |
 | 📊 Status | Quellen-Gesundheit, Module, Log des letzten Laufs |
 | ⚙️ Einstellungen | `config.yaml`-Editor, `.env` (Keys, maskiert), KI-Feedback verwalten |
 
 **„▶ Jetzt starten"** löst einen sofortigen Lauf aus (Progress-Dot, bei Fehler
 komplette Log-Kette im Status-Tab).
+
+**RSS-Feed:** `http://<lxc-ip>:8080/feed.xml` – in jedem RSS-Reader abonnieren.
 
 ---
 

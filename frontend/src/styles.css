@@ -96,6 +96,25 @@ main { display: flex; flex-direction: column; gap: 16px; }
 .chip.bad { color: var(--bad); border-color: rgba(224, 91, 91, 0.4); }
 .chip.off { color: var(--muted); }
 
+.chip-del {
+  background: none; border: none; color: var(--bad); cursor: pointer;
+  font-size: 0.85rem; padding: 0 0 0 6px; margin-left: 2px;
+}
+.chip-del:hover { color: #ff7676; }
+
+.watch-table {
+  width: 100%; border-collapse: collapse; margin-top: 12px;
+}
+.watch-table th {
+  text-align: left; color: var(--muted); font-weight: 500;
+  padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+}
+.watch-table td {
+  padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem;
+}
+.watch-table a { color: var(--accent-2); text-decoration: none; }
+.watch-table a:hover { text-decoration: underline; }
+
 .log {
   background: #0a0e1c; border: 1px solid var(--border); border-radius: 10px;
   padding: 12px; max-height: 320px; overflow: auto; font-size: 0.8rem;

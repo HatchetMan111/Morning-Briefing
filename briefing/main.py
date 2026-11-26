@@ -35,12 +35,14 @@ def _sources() -> dict:
         local_news,
         markets,
         selfhosted,
+        zoll_auktion,
     )
     return {
         "markets": markets,
         "econ_calendar": econ_calendar,
         "local_news": local_news,
         "auctions": auctions,
+        "zoll_auktion": zoll_auktion,
         "companies": companies,
         "ai_news": ai_news,
         "selfhosted": selfhosted,
@@ -103,6 +105,39 @@ def run() -> dict:
             print(f"[{key}] FEHLER: {exc}")
             traceback.print_exc()
 
+    # ==================== ALERTS & PREIS-TRACKER ====================
+    from briefing import alerts as alerts_mod
+    from briefing import price_watch as pw_mod
+
+    # Alle Items aus allen Sektionen für Alert-Prüfung sammeln
+    all_raw_items = []
+    for sec in sections:
+        all_raw_items.extend(sec.get("items", []))
+
+    # Keyword-Alerts prüfen
+    alert_hits = alerts_mod.check_alerts(all_raw_items)
+    alert_sec = alerts_mod.alert_section(alert_hits)
+    if alert_sec:
+        sections.insert(0, alert_sec)
+        sources_status["alerts"] = f"{len(alert_hits)} Treffer"
+        print(f"[alerts] {len(alert_hits)} Treffer")
+
+    # Sofortige Telegram-Benachrichtigung bei Alerts
+    if alert_hits:
+        alert_msg = alerts_mod.format_alert_notification(alert_hits)
+        notify.send(alert_msg)
+
+    # Preis-Tracker (eBay)
+    pw_triggered = pw_mod.check_price_watches()
+    pw_sec = pw_mod.price_watch_section(pw_triggered)
+    if pw_sec:
+        sections.insert(0, pw_sec)
+        sources_status["price_watch"] = f"{len(pw_triggered)} unter Limit"
+        print(f"[price_watch] {len(pw_triggered)} unter Limit")
+        pw_msg = pw_mod.format_price_alert(pw_triggered)
+        notify.send(pw_msg)
+
+    # ==================== BRIEFING-RENDERING ====================
     section_bodies = []   # (titel, html-body) für Telegram/Archiv
     data_sections = []    # strukturierte Daten für Web-UI
     for sec in sections:
