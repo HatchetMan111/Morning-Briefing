@@ -21,6 +21,8 @@ const SOURCE_META = {
   "ebay": { icon: "🛒", label: "eBay" },
   "price-watch": { icon: "💰", label: "Preis" },
   "mydealz": { icon: "🔥", label: "Deal" },
+  "tankerkoenig": { icon: "⛽", label: "Sprit" },
+  "weekly_review": { icon: "📅", label: "Woche" },
   "zvg-news": { icon: "🏠", label: "ZVG" },
   "gruendung": { icon: "🏢", label: "Gründung" },
   "firma-news": { icon: "📈", label: "Firma" },
@@ -260,6 +262,7 @@ export default function App() {
   const [fbKind, setFbKind] = useState("positive");
   const [configText, setConfigText] = useState("");
   const [envText, setEnvText] = useState("");
+  const [llmInfo, setLlmInfo] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [alertTerm, setAlertTerm] = useState("");
   const [alertSource, setAlertSource] = useState("*");
@@ -374,10 +377,14 @@ export default function App() {
 
   const loadSettings = async () => {
     try {
-      const [c, e, f] = await Promise.all([api.config(), api.env(), api.feedback()]);
+      const [c, e, f, llm] = await Promise.all([
+        api.config(), api.env(), api.feedback(),
+        fetch("/api/llm").then((r) => r.json()),
+      ]);
       setConfigText(c.yaml);
       setEnvText(e.env);
       setFeedback(f);
+      setLlmInfo(llm);
     } catch (err) {
       showToast(err.message, true);
     }
@@ -631,6 +638,37 @@ export default function App() {
 
         {tab === "settings" && (
           <>
+            {llmInfo && (
+              <div className="card">
+                <h2 className="section-head">🤖 KI-Provider</h2>
+                <div className="kv">
+                  <span>Aktiver Provider</span>
+                  <strong>{llmInfo.provider}</strong>
+                  <span>Gemini</span>
+                  <strong>{llmInfo.gemini ? "✅" : "–"}</strong>
+                  <span>OpenRouter</span>
+                  <strong>{llmInfo.openrouter ? "✅" : "–"}</strong>
+                  <span>Ollama</span>
+                  <strong>{llmInfo.ollama ? "✅" : "–"}</strong>
+                  {llmInfo.openrouter_model && (
+                    <>
+                      <span>OpenRouter Modell</span>
+                      <strong>{llmInfo.openrouter_model}</strong>
+                    </>
+                  )}
+                  {llmInfo.ollama_model && (
+                    <>
+                      <span>Ollama Modell</span>
+                      <strong>{llmInfo.ollama_model}</strong>
+                    </>
+                  )}
+                </div>
+                <p className="muted" style={{ marginTop: 10 }}>
+                  Provider wechseln: <code>LLM_PROVIDER=gemini|openrouter|ollama</code> in
+                  den Zugangsdaten unten setzen, speichern, dann Service neustarten.
+                </p>
+              </div>
+            )}
             <div className="card">
               <h2 className="section-head">⚙️ config.yaml</h2>
               <textarea value={configText} onChange={(e) => setConfigText(e.target.value)} rows={18} />
@@ -638,8 +676,10 @@ export default function App() {
             </div>
             <div className="card">
               <h2 className="section-head">🔑 Zugangsdaten (.env)</h2>
-              <p className="muted">Gesetzte Werte erscheinen als ***. Erlaubt: TELEGRAM_BOT_TOKEN,
-              TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN.</p>
+              <p className="muted">Gesetzte Werte erscheinen als ***. Erlaubt:
+              TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, GEMINI_API_KEY, EBAY_BEARER_TOKEN,
+              LLM_PROVIDER, OPENROUTER_API_KEY, OPENROUTER_MODEL, OLLAMA_BASE_URL,
+              OLLAMA_MODEL, TANKERKOENIG_API_KEY.</p>
               <textarea value={envText} onChange={(e) => setEnvText(e.target.value)} rows={6} />
               <button className="primary" disabled={busy} onClick={saveEnv}>💾 Speichern</button>
             </div>

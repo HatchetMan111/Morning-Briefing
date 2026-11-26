@@ -103,6 +103,7 @@ def api_status():
         },
         "telegram_configured": bool(os.environ.get("TELEGRAM_BOT_TOKEN")),
         "gemini_configured": bool(os.environ.get("GEMINI_API_KEY")),
+        "weekly_review_enabled": cfg.get("weekly_review", {}).get("enabled", False),
         "latest_briefing": latest[0] if latest else None,
         "latest_sources": latest_data.get("sources", {}),
         "runner": runner.status(),
@@ -179,6 +180,15 @@ def rss_feed(request: Request):
     return Response(content=xml, media_type="application/rss+xml")
 
 
+# ---------------- LLM-Provider Info ----------------
+@app.get("/api/llm")
+def api_llm_info():
+    from briefing.ai_client import provider_info
+    info = provider_info()
+    info["hint"] = "Provider via .env LLM_PROVIDER setzen (gemini|openrouter|ollama)"
+    return info
+
+
 # ---------------- Markt-Historie (Sparkline) ----------------
 @app.get("/api/market-history/{label}")
 def api_market_history(label: str, days: int = 14):
@@ -211,7 +221,12 @@ def api_config_update(update: ConfigUpdate):
 
 
 # ---------------- .env (Token) ----------------
-ALLOWED_ENV_KEYS = {"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "GEMINI_API_KEY", "EBAY_BEARER_TOKEN"}
+ALLOWED_ENV_KEYS = {
+    "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
+    "GEMINI_API_KEY", "EBAY_BEARER_TOKEN",
+    "LLM_PROVIDER", "OPENROUTER_API_KEY", "OPENROUTER_MODEL",
+    "OLLAMA_BASE_URL", "OLLAMA_MODEL", "TANKERKOENIG_API_KEY",
+}
 
 
 @app.get("/api/env")

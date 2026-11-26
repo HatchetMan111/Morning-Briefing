@@ -30,6 +30,7 @@ def _sources() -> dict:
         auctions,
         companies,
         econ_calendar,
+        fuel_prices,
         github_trending,
         kleinanzeigen,
         local_news,
@@ -41,6 +42,7 @@ def _sources() -> dict:
     return {
         "markets": markets,
         "econ_calendar": econ_calendar,
+        "fuel_prices": fuel_prices,
         "local_news": local_news,
         "auctions": auctions,
         "zoll_auktion": zoll_auktion,
@@ -108,6 +110,19 @@ def run() -> dict:
             sources_status[key] = f"fehler: {exc}"
             print(f"[{key}] FEHLER: {exc}")
             traceback.print_exc()
+
+    # ==================== WOCHENRÜCKBLICK ====================
+    from briefing import weekly as weekly_mod
+    if weekly_mod.should_generate(cfg):
+        try:
+            wr_sec = weekly_mod.generate(cfg)
+            if wr_sec:
+                sections.append(wr_sec)
+                sources_status["weekly_review"] = "ok"
+                print("[weekly_review] ok")
+        except Exception as exc:  # noqa: BLE001
+            sources_status["weekly_review"] = f"fehler: {exc}"
+            print(f"[weekly_review] FEHLER: {exc}")
 
     # ==================== ALERTS & PREIS-TRACKER ====================
     from briefing import alerts as alerts_mod

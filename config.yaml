@@ -36,6 +36,7 @@ run:
 modules:
   markets:          { enabled: true }
   econ_calendar:    { enabled: true }
+  fuel_prices:     { enabled: true }
   local_news:      { enabled: true }
   auctions:        { enabled: true }
   zoll_auktion:    { enabled: true }
@@ -122,6 +123,19 @@ mydealz:
   # Beste Deals von mydealz.de (RSS-Feed, keine Auth nötig)
   max_items: 12             # wie viele der heißesten Deals
   min_price: 0              # Mindestpreis (0 = alle)
+
+fuel_prices:
+  # Spritpreise via Tankerkönig API (kostenlos)
+  # Key beantragen: https://creativecommons.tankerkoenig.de/
+  # Key in .env als TANKERKOENIG_API_KEY
+  lat: 49.4667             # Creglingen
+  lng: 9.8833
+  radius_km: 15            # Suchradius (max 25 km)
+
+weekly_review:
+  # Wochenrückblick: KI fasst alle Briefings der Woche zusammen
+  enabled: true
+  day: "sunday"            # an welchem Tag (monday-sunday)
 
 # ---------- KI (Gemini Flash, kostenloses Kontingent) ----------
 ai:
